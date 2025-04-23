@@ -3,3 +3,4 @@ terraform {
     	bucket  = "thotaterra"
     	prefix  = "terraform/state"
 }
+}
