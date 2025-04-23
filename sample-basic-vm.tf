@@ -36,7 +36,7 @@ resource "google_compute_network" "main_vpc" {
 }
 
 resource "google_compute_subnetwork" "subnet_1" {
-  name          = "subnet-1"
+  name          = "subnet-tf"
   ip_cidr_range = var.subnet_ip_range
   region        = var.gcp_region
   network       = google_compute_network.main_vpc.id
