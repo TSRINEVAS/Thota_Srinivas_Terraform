@@ -4,7 +4,7 @@ provider "google" {
 }
 
 resource "google_storage_bucket" "srinivas_bucket" {
-  name                        = "srinivasthota1981"
+  name                        = "srinivasthota1981200"
   location                    = "US"
   project                     = var.project_id
   force_destroy               = true
