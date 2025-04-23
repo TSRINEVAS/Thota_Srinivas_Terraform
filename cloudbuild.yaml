@@ -28,14 +28,3 @@ steps:
         echo "Running Terraform plan..."
         terraform plan -var-file="terraform.tfvars"
     secretEnv: ['SERVICE_ACCOUNT_KEY']
-     - name: hashicorp/terraform:1.5.7
-    id: Terraform Apply
-    entrypoint: sh
-    args:
-      - -c
-      - |
-        echo "$SERVICE_ACCOUNT_KEY" > key.json
-        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
-        echo "Running Terraform apply..."
-        terraform apply -var-file="terraform.tfvars" -auto-approve
-    secretEnv: ['SERVICE_ACCOUNT_KEY']
