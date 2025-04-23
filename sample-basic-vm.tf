@@ -29,8 +29,8 @@ resource "google_compute_instance" "flask_app_1" {
   }
 }
 
-resource "google_compute_network" "main" {
-  name                    = "main-vpctf"
+resource "google_compute_network" "main_vpc" {
+  name                    = "main-vpc"
   auto_create_subnetworks = var.vpc_auto_create_subnets
   mtu                     = var.vpc_mtu
 }
