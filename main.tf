@@ -3,12 +3,13 @@ provider "google" {
   region  = var.region
 }
 
-resource "google_storage_bucket" "srinivas_buckett" {
-  name     = "srinivasthota19811981"
-  location = var.region
+resource "google_storage_bucket" "srinivas_bucket" {
+  name     = "srinivasthota1981"
+  location = "US"
   force_destroy = true
 
   uniform_bucket_level_access = true
+}
 
   versioning {
     enabled = true
