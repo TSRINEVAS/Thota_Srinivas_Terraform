@@ -2,14 +2,18 @@ options:
   logging: CLOUD_LOGGING_ONLY
 
 serviceAccount: '932539802604-compute@developer.gserviceaccount.com'
+
 availableSecrets:
   secretManager:
     - versionName: projects/932539802604/secrets/service-account-key/versions/latest
-      env: 'GOOGLE_APPLICATION_CREDENTIALS'
+      mountPath: /secrets
+
 steps:
   - name: hashicorp/terraform:1.5.7
     id: Terraform Init
     entrypoint: sh
+    env:
+      - 'GOOGLE_APPLICATION_CREDENTIALS=/secrets/service-account-key.json'
     args:
       - -c
       - |
@@ -20,6 +24,8 @@ steps:
   - name: hashicorp/terraform:1.5.7
     id: Terraform Plan
     entrypoint: sh
+    env:
+      - 'GOOGLE_APPLICATION_CREDENTIALS=/secrets/service-account-key.json'
     args:
       - -c
       - |
