@@ -1,7 +1,8 @@
 resource "google_storage_bucket" "srinivas_bucket" {
-  name     = "srinivasthota1981"
-  location = "US"
-  force_destroy = true
+  name                        = "srinivasthota1981"
+  location                    = "US"
+  force_destroy               = true
+  project                     = var.project_id
   uniform_bucket_level_access = true
 
   versioning {
