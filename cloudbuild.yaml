@@ -2,7 +2,10 @@ options:
   logging: CLOUD_LOGGING_ONLY
 
 serviceAccount: '932539802604-compute@developer.gserviceaccount.com'
-
+availableSecrets:
+  secretManager:
+    - versionName: projects/932539802604/secrets/service-account-key/versions/latest
+      env: 'GOOGLE_APPLICATION_CREDENTIALS'
 steps:
   - name: hashicorp/terraform:1.5.7
     id: Terraform Init
