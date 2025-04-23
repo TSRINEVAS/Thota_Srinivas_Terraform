@@ -1,4 +1,5 @@
-serviceAccountName: '932539802604-compute@developer.gserviceaccount.com'
+serviceAccount: '932539802604-compute@developer.gserviceaccount.com'
+
 steps:
   - name: hashicorp/terraform:1.5.7
     id: Terraform Init
