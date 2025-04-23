@@ -1,5 +1,5 @@
 options:
-  service_account: terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceaccount.com
+  serviceAccount: 'projects/vaulted-epigram-457004-c6/serviceAccounts/terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceaccount.com'
   logging: CLOUD_LOGGING_ONLY
 
 steps:
@@ -16,3 +16,6 @@ steps:
   - name: hashicorp/terraform:1.5.7
     id: Terraform Plan
     entrypoint: sh
+    args:
+      - "-c"
+      - "terraform plan"
