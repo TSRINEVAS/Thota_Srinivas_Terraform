@@ -2,42 +2,15 @@ steps:
   - name: hashicorp/terraform:1.5.7
     id: Terraform Init
     entrypoint: sh
-    secretEnv: ['SERVICE_ACCOUNT_KEY']
     args:
       - -c
       - |
-        echo "$SERVICE_ACCOUNT_KEY" > key.json
         terraform init \
           -backend-config="bucket=thotaterra" \
-          -backend-config="prefix=terraform/state" \
-          -backend-config="credentials=key.json"
-
-  - name: hashicorp/terraform:1.5.7
-    id: Terraform Plan
-    entrypoint: sh
+          -backend-config="prefix=terraform/state"
     secretEnv: ['SERVICE_ACCOUNT_KEY']
-    args:
-      - -c
-      - |
-        export GOOGLE_APPLICATION_CREDENTIALS=key.json
-        terraform plan
-
-  - name: hashicorp/terraform:1.5.7
-    id: Terraform Apply
-    entrypoint: sh
-    secretEnv: ['SERVICE_ACCOUNT_KEY']
-    args:
-      - -c
-      - |
-        export GOOGLE_APPLICATION_CREDENTIALS=key.json
-        terraform apply -auto-approve
-
-options:
-  logging: CLOUD_LOGGING_ONLY
-
-serviceAccount: 'terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceaccount.com'
 
 availableSecrets:
   secretManager:
-    - versionName: projects/vaulted-epigram-457004-c6/secrets/service-account-key/versions/latest
-      env: SERVICE_ACCOUNT_KEY
+  - versionName: projects/vaulted-epigram-457004-c6/secrets/service-account-key/versions/latest
+    env: 'SERVICE_ACCOUNT_KEY'
