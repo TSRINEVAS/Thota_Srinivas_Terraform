@@ -1,4 +1,9 @@
 steps:
+  # Your build steps here
+
+options:
+  serviceAccount: '932539802604-compute@developer.gserviceaccount.com'
+steps:
   - name: hashicorp/terraform:1.5.7
     id: Terraform Init
     entrypoint: sh
