@@ -5,6 +5,4 @@ terraform {
       version = "6.31.0"
     }
   }
-
-  plugin_cache_dir = ".terraform/plugins"
 }
