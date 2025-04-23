@@ -1,10 +1,1 @@
-project_id      = "vaulted-epigram-457004-c6"
-region          = "us-west1"
-zone            = "us-west1-a"
-network_name    = "main-vpcterraform"
-subnet_name     = "subnet-tf"
-subnet_cidr     = "10.0.1.0/24"
-instance_name   = "flask-app-1"
-machine_type    = "f1-micro"
-image_family    = "debian-11"
-image_project   = "debian-cloud"
+
