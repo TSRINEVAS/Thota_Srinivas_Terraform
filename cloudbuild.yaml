@@ -1,0 +1,29 @@
+steps:
+  - name: hashicorp/terraform:1.5.7
+    id: Terraform Init
+    entrypoint: sh
+    args:
+      - "-c"
+      - |
+        terraform init \
+          -backend-config="bucket=thotaterra" \
+          -backend-config="prefix=terraform/state"
+
+  - name: hashicorp/terraform:1.5.7
+    id: Terraform Plan
+    entrypoint: sh
+    args:
+      - "-c"
+      - |
+        terraform plan -var-file="terraform.tfvars"
+
+  # Optional: Trigger apply via manual approval or as a separate trigger
+  - name: gcr.io/cloud-builders/gcloud
+    id: Manual Approval (Optional)
+    waitFor: ["Terraform Plan"]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        echo "Waiting for manual approval to run 'apply'."
+        # You can integrate with Slack/Email or use Cloud Build triggers to continue
