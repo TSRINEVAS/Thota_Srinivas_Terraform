@@ -15,8 +15,7 @@ steps:
     args:
       - -c
       - |
-         terraform init \
+        terraform init \
           -backend-config="bucket=thotaterra" \
           -backend-config="prefix=terraform/state"
         terraform plan -var-file="terraform.tfvars"
-    secretEnv: ['SERVICE_ACCOUNT_KEY']
