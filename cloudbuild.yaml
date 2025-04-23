@@ -15,7 +15,10 @@ steps:
     args:
       - -c
       - |
+        echo $$SERVICE_ACCOUNT_KEY > key.json
+        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
         terraform init \
           -backend-config="bucket=thotaterra" \
           -backend-config="prefix=terraform/state"
         terraform plan -var-file="terraform.tfvars"
+    secretEnv: ['SERVICE_ACCOUNT_KEY']
