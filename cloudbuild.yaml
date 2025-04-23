@@ -7,18 +7,9 @@ steps:
   - name: hashicorp/terraform:1.5.7
     id: Terraform Init
     entrypoint: sh
-    env:
-      - 'GOOGLE_APPLICATION_CREDENTIALS=/secret/credentials.json'
-    secretEnv:
-      - 'GOOGLE_APPLICATION_CREDENTIALS'
-    secrets:
-      - kmsKeyName: projects/932539802604/locations/global/keyRings/cloudbuild/cryptoKeys/cloudbuild
-        secretEnv:
-          credentials: ${_SERVICE_ACCOUNT_KEY}
     args:
       - -c
       - |
-        cp /secret/credentials.json /workspace/credentials.json
         terraform init \
           -backend-config="bucket=thotaterra" \
           -backend-config="prefix=terraform/state"
@@ -26,16 +17,7 @@ steps:
   - name: hashicorp/terraform:1.5.7
     id: Terraform Plan
     entrypoint: sh
-    env:
-      - 'GOOGLE_APPLICATION_CREDENTIALS=/secret/credentials.json'
-    secretEnv:
-      - 'GOOGLE_APPLICATION_CREDENTIALS'
-    secrets:
-      - kmsKeyName: projects/932539802604/locations/global/keyRings/cloudbuild/cryptoKeys/cloudbuild
-        secretEnv:
-          credentials: ${_SERVICE_ACCOUNT_KEY}
     args:
       - -c
       - |
-        cp /secret/credentials.json /workspace/credentials.json
         terraform plan -var-file="terraform.tfvars"
