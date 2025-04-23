@@ -30,20 +30,6 @@ steps:
     secretEnv: ['SERVICE_ACCOUNT_KEY']
 
   - name: hashicorp/terraform:1.5.7
-    id: Check Approval
-    entrypoint: sh
-    args:
-      - -c
-      - |
-        echo "Checking for approval..."
-        if [ -f "/workspace/approved" ]; then
-          echo "Approved, proceeding with apply..."
-        else
-          echo "Not approved, exiting..."
-          exit 1
-        fi
-
-  - name: hashicorp/terraform:1.5.7
     id: Terraform Apply
     entrypoint: sh
     args:
