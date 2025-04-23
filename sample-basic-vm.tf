@@ -29,13 +29,13 @@ resource "google_compute_instance" "flask_app_1" {
   }
 }
 
-resource "google_compute_network" "main_vpc" {
-  name                    = "main-vpc"
+resource "google_compute_network" "main_vpcterraform" {
+  name                    = "main-vpcterraform"
   auto_create_subnetworks = var.vpc_auto_create_subnets
   mtu                     = var.vpc_mtu
 }
 
-resource "google_compute_subnetwork" "subnet_1" {
+resource "google_compute_subnetwork" "subnet_tf" {
   name          = "subnet-tf"
   ip_cidr_range = var.subnet_ip_range
   region        = var.gcp_region
