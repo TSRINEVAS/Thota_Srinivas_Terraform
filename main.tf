@@ -3,8 +3,8 @@ provider "google" {
   region  = var.region
 }
 
-resource "google_storage_bucket" "srinivas_bucket" {
-  name     = "srinivasthota1981"
+resource "google_storage_bucket" "srinivas_buckett" {
+  name     = "srinivasthota19811981"
   location = var.region
   force_destroy = true
 
