@@ -10,31 +10,15 @@ serviceAccount: 'terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceac
 
 steps:
   - name: hashicorp/terraform:1.5.7
-    id: Write Service Account Key
+    id: Write Service Account Key and Run Terraform
     entrypoint: sh
     args:
       - -c
       - |
-        cat /secrets/service-account-key/key.json > /workspace/key.json
-    volumes:
-    - name: service-account-key
-      path: /secrets/service-account-key
-
-  - name: hashicorp/terraform:1.5.7
-    id: Terraform Init
-    entrypoint: sh
-    args:
-      - -c
-      - |
+        echo $$SERVICE_ACCOUNT_KEY > key.json
+        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
         terraform init \
           -backend-config="bucket=thotaterra" \
           -backend-config="prefix=terraform/state"
-
-  - name: hashicorp/terraform:1.5.7
-    id: Terraform Plan
-    entrypoint: sh
-    args:
-      - -c
-      - |
-        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
         terraform plan -var-file="terraform.tfvars"
+    secretEnv: ['SERVICE_ACCOUNT_KEY']
