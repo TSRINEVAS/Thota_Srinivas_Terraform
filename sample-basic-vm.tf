@@ -30,7 +30,7 @@ resource "google_compute_instance" "flask_app_1" {
 }
 
 resource "google_compute_network" "main_vpc" {
-  name                    = "main-vpc2"
+  name                    = "main-vpctf"
   auto_create_subnetworks = var.vpc_auto_create_subnets
   mtu                     = var.vpc_mtu
 }
