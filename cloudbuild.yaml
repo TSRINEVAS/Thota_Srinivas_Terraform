@@ -1,3 +1,5 @@
+- name: gcr.io/cloud-builders/curl
+  args: ["https://registry.terraform.io"]
 options:
   logging: CLOUD_LOGGING_ONLY
 
