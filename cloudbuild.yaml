@@ -15,8 +15,10 @@ steps:
     args:
       - -c
       - |
-        echo $SERVICE_ACCOUNT_KEY > key.json
-    secretEnv: ['SERVICE_ACCOUNT_KEY']
+        cat /secrets/service-account-key/key.json > /workspace/key.json
+    volumes:
+    - name: service-account-key
+      path: /secrets/service-account-key
 
   - name: hashicorp/terraform:1.5.7
     id: Terraform Init
@@ -34,4 +36,5 @@ steps:
     args:
       - -c
       - |
+        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
         terraform plan -var-file="terraform.tfvars"
