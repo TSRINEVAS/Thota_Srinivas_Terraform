@@ -16,17 +16,3 @@ steps:
   - name: hashicorp/terraform:1.5.7
     id: Terraform Plan
     entrypoint: sh
-    args:
-      - "-c"
-      - |
-        terraform plan -var-file="terraform.tfvars"
-
-  # Optional: Uncomment to enable auto-apply
-  # - name: hashicorp/terraform:1.5.7
-  #   id: Terraform Apply
-  #   waitFor: ["Terraform Plan"]
-  #   entrypoint: sh
-  #   args:
-  #     - "-c"
-  #     - |
-  #       terraform apply -auto-approve -var-file="terraform.tfvars"
