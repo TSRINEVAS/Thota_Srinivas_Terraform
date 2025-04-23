@@ -1,9 +1,14 @@
+options:
+  logging: GCS_ONLY
+  logsBucket: 'gs://thotaterra/build-logs'
+  service_account: 'terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceaccount.com'
+
 steps:
   - name: hashicorp/terraform:1.5.7
     id: Terraform Init
     entrypoint: sh
     args:
-      - "-c"
+      - -c
       - |
         terraform init \
           -backend-config="bucket=thotaterra" \
@@ -13,6 +18,4 @@ steps:
     id: Terraform Plan
     entrypoint: sh
     args:
-      - "-c"
-      - |
-        terraform plan -var-file="terraform.tfvars"
+      - -
