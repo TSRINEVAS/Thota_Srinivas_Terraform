@@ -19,7 +19,7 @@ resource "google_storage_bucket" "srinivas_bucket" {
       type = "Delete"
     }
     condition {
-      age = 200
+      age = 100
     }
   }
 }
