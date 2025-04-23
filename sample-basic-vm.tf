@@ -15,7 +15,7 @@ resource "google_compute_instance" "flask_app_1" {
   metadata_startup_script = var.vm_startup_script
 
   network_interface {
-    subnetwork = google_compute_subnetwork.subnet_1.id
+    subnetwork = google_compute_subnetwork.subnet_tf.id
 
     access_config {
       # Include this section to give the VM an external IP address
