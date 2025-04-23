@@ -1,13 +1,3 @@
-options:
-  logging: CLOUD_LOGGING_ONLY
-
-serviceAccount: 'terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceaccount.com'
-
-availableSecrets:
-  secretManager:
-    - versionName: projects/vaulted-epigram-457004-c6/secrets/service-account-key/versions/latest
-      env: GOOGLE_CREDENTIALS
-
 steps:
   - name: hashicorp/terraform:1.5.7
     id: Terraform Init
@@ -26,3 +16,28 @@ steps:
     id: Terraform Plan
     entrypoint: sh
     secretEnv: ['GOOGLE_CREDENTIALS']
+    args:
+      - -c
+      - |
+        export GOOGLE_APPLICATION_CREDENTIALS=key.json
+        terraform plan
+
+  - name: hashicorp/terraform:1.5.7
+    id: Terraform Apply
+    entrypoint: sh
+    secretEnv: ['GOOGLE_CREDENTIALS']
+    args:
+      - -c
+      - |
+        export GOOGLE_APPLICATION_CREDENTIALS=key.json
+        terraform apply -auto-approve
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+serviceAccount: 'terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceaccount.com'
+
+availableSecrets:
+  secretManager:
+    - versionName: projects/vaulted-epigram-457004-c6/secrets/service-account-key/versions/latest
+      env: GOOGLE_CREDENTIALS
