@@ -1,4 +1,23 @@
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+availableSecrets:
+  secretManager:
+  - versionName: projects/vaulted-epigram-457004-c6/secrets/service-account-key/versions/latest
+    env: 'SERVICE_ACCOUNT_KEY'
+
+serviceAccount: 'terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceaccount.com'
+
 steps:
+  - name: hashicorp/terraform:1.5.7
+    id: Write Service Account Key
+    entrypoint: sh
+    args:
+      - -c
+      - |
+        echo $SERVICE_ACCOUNT_KEY > key.json
+    secretEnv: ['SERVICE_ACCOUNT_KEY']
+
   - name: hashicorp/terraform:1.5.7
     id: Terraform Init
     entrypoint: sh
@@ -8,9 +27,11 @@ steps:
         terraform init \
           -backend-config="bucket=thotaterra" \
           -backend-config="prefix=terraform/state"
-    secretEnv: ['SERVICE_ACCOUNT_KEY']
 
-availableSecrets:
-  secretManager:
-  - versionName: projects/vaulted-epigram-457004-c6/secrets/service-account-key/versions/latest
-    env: 'SERVICE_ACCOUNT_KEY'
+  - name: hashicorp/terraform:1.5.7
+    id: Terraform Plan
+    entrypoint: sh
+    args:
+      - -c
+      - |
+        terraform plan -var-file="terraform.tfvars"
