@@ -10,7 +10,7 @@ serviceAccount: 'terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceac
 
 steps:
   - name: hashicorp/terraform:1.5.7
-    id: Write Service Account Key and Run Terraform
+    id: Write Service Account Key and Run Terraform Init and Plan
     entrypoint: sh
     args:
       - -c
@@ -26,5 +26,19 @@ steps:
           -backend-config="prefix=terraform/state" \
           -reconfigure
         echo "Running Terraform plan..."
-        terraform plan -var-file="terraform.tfvars"
+        terraform plan -var-file="terraform.tfvars" -out=tfplan
     secretEnv: ['SERVICE_ACCOUNT_KEY']
+
+  - name: hashicorp/terraform:1.5.7
+    id: Terraform Apply
+    entrypoint: sh
+    args:
+      - -c
+      - |
+        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+        echo "Applying Terraform plan..."
+        terraform apply tfplan
+    approval:
+      approvers:
+        - user:your-email@example.com
+      approval_state: PENDING
