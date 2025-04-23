@@ -1,8 +1,6 @@
 options:
   serviceAccount: 'projects/vaulted-epigram-457004-c6/serviceAccounts/terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceaccount.com'
   logging: CLOUD_LOGGING_ONLY
-  logsBucket: 'gs://thotaterra'  # Using your specified bucket
-
 steps:
   - name: hashicorp/terraform:1.5.7
     id: Terraform Init
