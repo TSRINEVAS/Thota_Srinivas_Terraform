@@ -1,3 +1,6 @@
+options:
+  logging: CLOUD_LOGGING_ONLY
+
 serviceAccount: '932539802604-compute@developer.gserviceaccount.com'
 
 steps:
