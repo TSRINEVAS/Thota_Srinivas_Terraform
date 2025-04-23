@@ -1,7 +1,7 @@
 options:
   logging: CLOUD_LOGGING_ONLY
 
-serviceAccount: '932539802604-compute@developer.gserviceaccount.com'
+serviceAccount: 'terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceaccount.com'
 
 availableSecrets:
   secretManager:
@@ -26,8 +26,3 @@ steps:
     id: Terraform Plan
     entrypoint: sh
     secretEnv: ['GOOGLE_CREDENTIALS']
-    args:
-      - -c
-      - |
-        echo "$GOOGLE_CREDENTIALS" > key.json
-        terraform plan -var-file="terraform.tfvars" -var="credentials_file=key.json"
