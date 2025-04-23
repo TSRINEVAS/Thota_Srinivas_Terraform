@@ -3,40 +3,41 @@ options:
 
 availableSecrets:
   secretManager:
-  - versionName: projects/vaulted-epigram-457004-c6/secrets/service-account-key/versions/latest
-    env: 'SERVICE_ACCOUNT_KEY'
+    - versionName: projects/vaulted-epigram-457004-c6/secrets/service-account-key/versions/latest
+      env: 'SERVICE_ACCOUNT_KEY'
 
 serviceAccount: 'terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceaccount.com'
 
 steps:
   - name: hashicorp/terraform:1.5.7
-    id: Write Service Account Key and Run Terraform Init and Plan
+    id: Terraform Init and Plan
     entrypoint: sh
+    secretEnv: ['SERVICE_ACCOUNT_KEY']
     args:
       - -c
       - |
         echo "Writing service account key to file..."
-        echo $$SERVICE_ACCOUNT_KEY > key.json
-        echo "Service account key written to file."
-        cat key.json
+        echo "$SERVICE_ACCOUNT_KEY" > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+
         echo "Initializing Terraform..."
         terraform init \
           -backend-config="bucket=thotaterra" \
           -backend-config="prefix=terraform/state" \
           -reconfigure
+
         echo "Running Terraform plan..."
         terraform plan -var-file="terraform.tfvars" -out=tfplan
-    secretEnv: ['SERVICE_ACCOUNT_KEY']
 
-- name: hashicorp/terraform:1.5.7
+  - name: hashicorp/terraform:1.5.7
     id: Terraform Apply
     entrypoint: sh
+    secretEnv: ['SERVICE_ACCOUNT_KEY']
     args:
       - -c
       - |
         echo "$SERVICE_ACCOUNT_KEY" > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
-        echo "Running Terraform apply..."
+
+        echo "Applying Terraform plan..."
         terraform apply -auto-approve tfplan
-    secretEnv: ['SERVICE_ACCOUNT_KEY']
