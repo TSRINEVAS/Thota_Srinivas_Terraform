@@ -1,8 +1,13 @@
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+
 resource "google_storage_bucket" "srinivas_bucket" {
   name                        = "srinivasthota1981"
   location                    = "US"
-  force_destroy               = true
   project                     = var.project_id
+  force_destroy               = true
   uniform_bucket_level_access = true
 
   versioning {
