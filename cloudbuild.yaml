@@ -13,22 +13,16 @@ steps:
     id: Terraform Init
     entrypoint: sh
     env:
-      - 'GOOGLE_APPLICATION_CREDENTIALS=/secret/service-account-key'
+      - 'GOOGLE_APPLICATION_CREDENTIALS=/workspace/credentials.json'
+    volumes:
+      - name: 'credentials'
+        secret:
+          secretManager:
+            versionName: projects/932539802604/secrets/service-account-key/versions/latest
     args:
       - -c
       - |
-        echo $GOOGLE_APPLICATION_CREDENTIALS
+        cp /credentials/service-account-key /workspace/credentials.json
         terraform init \
           -backend-config="bucket=thotaterra" \
-          -backend-config="prefix=terraform/state"
-
-  - name: hashicorp/terraform:1.5.7
-    id: Terraform Plan
-    entrypoint: sh
-    env:
-      - 'GOOGLE_APPLICATION_CREDENTIALS=/secret/service-account-key'
-    args:
-      - -c
-      - |
-        echo $GOOGLE_APPLICATION_CREDENTIALS
-        terraform plan -var-file="terraform.tfvars"
+          -backend-config="
