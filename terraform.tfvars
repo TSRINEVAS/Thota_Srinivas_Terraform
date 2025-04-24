@@ -1,3 +1,6 @@
 project_id = "vaulted-epigram-457004-c6"
 region     = "us-central1"
-
+vpc_name     = "dev-vpc"
+subnet_name  = "dev-subnet"
+subnet_cidr  = "10.10.0.0/24"
+region       = "us-central1"
