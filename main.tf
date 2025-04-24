@@ -22,10 +22,10 @@ resource "google_storage_bucket" "srinivas_bucket" {
     }
   }
 }
-resource "google_compute_subnetwork" "subnet" {
-  name          = var.subnet_name
-  ip_cidr_range = var.subnet_cidr
-  region        = var.region
-  network = module.network.vpc_self_link
+module "network" {
+  source       = "./modules/network"  # or the correct relative/remote path
+  vpc_name     = var.vpc_name
+  subnet_name  = var.subnet_name
+  subnet_cidr  = var.subnet_cidr
+  region       = var.region
 }
-
