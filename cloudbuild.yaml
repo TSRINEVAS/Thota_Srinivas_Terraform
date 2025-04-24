@@ -27,7 +27,7 @@ steps:
           -reconfigure
 
   - name: hashicorp/terraform:1.5.7
-    id: Terraform Destroy
+    id: Terraform Apply
     entrypoint: sh
     secretEnv: ['SERVICE_ACCOUNT_KEY']
     args:
@@ -37,4 +37,4 @@ steps:
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
 
         echo "Destroying Terraform-managed infrastructure..."
-        terraform destroy -var-file="terraform.tfvars" -auto-approve
+        terraform apply -var-file="terraform.tfvars" -auto-approve
