@@ -23,7 +23,7 @@ resource "google_storage_bucket" "srinivas_bucket" {
   }
 }
 
-module "new_network" {
+module "network" {
   source  = "./modules/vpc"
   project = var.project_id
   name    = "custom-vpc"
