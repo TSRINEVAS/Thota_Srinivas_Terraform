@@ -24,17 +24,10 @@ resource "google_storage_bucket" "srinivas_bucket" {
 }
 
 module "network" {
-  source  = "./modules/vpc"
-  project = var.project_id
-  name    = "custom-vpc"
-  region  = var.region
-  cidr    = "10.10.0.0/16"
-  subnet  = {
-    name       = "custom-subnet"
-    cidr       = "10.10.1.0/24"
-    region     = var.region
-    purpose    = "PRIVATE"
-    flow_logs  = true
-  }
+  source       = "./modules/network"
+  vpc_name     = var.vpc_name
+  subnet_name  = var.subnet_name
+  subnet_cidr  = var.subnet_cidr
+  region       = var.region
 }
 
