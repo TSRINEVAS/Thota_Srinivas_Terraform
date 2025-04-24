@@ -10,7 +10,7 @@ serviceAccount: 'terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceac
 
 steps:
   - name: hashicorp/terraform:1.5.7
-    id: Terraform Init and Plan
+    id: Terraform Init
     entrypoint: sh
     secretEnv: ['SERVICE_ACCOUNT_KEY']
     args:
@@ -26,11 +26,8 @@ steps:
           -backend-config="prefix=terraform/state" \
           -reconfigure
 
-        echo "Running Terraform plan..."
-        terraform plan -var-file="terraform.tfvars" -out=tfplan
-
   - name: hashicorp/terraform:1.5.7
-    id: Terraform Apply
+    id: Terraform Destroy
     entrypoint: sh
     secretEnv: ['SERVICE_ACCOUNT_KEY']
     args:
@@ -39,5 +36,5 @@ steps:
         echo "$$SERVICE_ACCOUNT_KEY" > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
 
-        echo "Applying Terraform plan..."
-        terraform destroy -auto-approve tfplan
+        echo "Destroying Terraform-managed infrastructure..."
+        terraform destroy -var-file="terraform.tfvars" -auto-approve
