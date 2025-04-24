@@ -5,7 +5,6 @@ resource "google_compute_firewall" "allow_ssh" {
     protocol = "tcp"
     ports    = ["22"]
   }
-
   direction = "INGRESS"
   source_ranges = var.source_ranges
   target_tags   = var.target_tags
