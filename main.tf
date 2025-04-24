@@ -10,3 +10,10 @@ module "network" {
   subnet_cidr  = var.subnet_cidr
   region       = var.region
 }
+module "firewall_ssh" {
+  source        = "./modules/firewall"
+  name          = "allow-ssh-ingress"
+  network       = module.network.vpc_self_link
+  source_ranges = ["0.0.0.0/0"]      # You can limit to a known IP range
+  target_tags   = ["ssh-enabled"]   # Attach this to instances if needed
+}
