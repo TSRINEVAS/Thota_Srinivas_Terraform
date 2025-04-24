@@ -22,4 +22,11 @@ resource "google_storage_bucket" "srinivas_bucket" {
       age = 30
     }
   }
+  module "new_network" {
+  source       = "./modules/network"
+  vpc_name     = "new-vpc"
+  subnet_name  = "new-subnet"
+  subnet_cidr  = "10.20.0.0/24"
+  region       = var.region
+}
 }
