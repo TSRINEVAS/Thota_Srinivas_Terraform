@@ -4,9 +4,8 @@ provider "google" {
 }
 
 resource "google_storage_bucket" "srinivas_bucket" {
-  name                        = "srinivasthota1981200"
+  name                        = "srinivasthota1981"
   location                    = "US"
-  project                     = var.project_id
   force_destroy               = true
   uniform_bucket_level_access = true
 
@@ -19,14 +18,23 @@ resource "google_storage_bucket" "srinivas_bucket" {
       type = "Delete"
     }
     condition {
-      age = 30
+      age = 365
     }
   }
-  module "new_network" {
-  source       = "./modules/network"
-  vpc_name     = "new-vpc"
-  subnet_name  = "new-subnet"
-  subnet_cidr  = "10.20.0.0/24"
-  region       = var.region
 }
+
+module "new_network" {
+  source  = "./modules/vpc"
+  project = var.project_id
+  name    = "custom-vpc"
+  region  = var.region
+  cidr    = "10.10.0.0/16"
+  subnet  = {
+    name       = "custom-subnet"
+    cidr       = "10.10.1.0/24"
+    region     = var.region
+    purpose    = "PRIVATE"
+    flow_logs  = true
+  }
 }
+
