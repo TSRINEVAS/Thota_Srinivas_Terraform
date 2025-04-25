@@ -6,6 +6,9 @@ options:
     - TF_IN_AUTOMATION=true
     - TF_INPUT=false
 
+substitutions:
+  _BUILD_ID: ${BUILD_ID}
+
 availableSecrets:
   secretManager:
     - versionName: projects/vaulted-epigram-457004-c6/secrets/service-account-key/versions/latest
@@ -27,6 +30,7 @@ steps:
         chmod 600 /workspace/key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
         gcloud auth activate-service-account --key-file=/workspace/key.json
+        export BUILD_ID=$_BUILD_ID
 
   - name: hashicorp/terraform:1.5.7
     id: Terraform Init
@@ -35,6 +39,7 @@ steps:
       - -c
       - |
         set -euo pipefail
+        export BUILD_ID=$_BUILD_ID
         terraform init \
           -backend-config="bucket=thotaterra" \
           -backend-config="prefix=terraform/state" \
@@ -48,6 +53,7 @@ steps:
       - -c
       - |
         set -euo pipefail
+        export BUILD_ID=$_BUILD_ID
         terraform plan \
           -var-file="terraform.tfvars" \
           -out=tfplan.binary \
@@ -61,7 +67,7 @@ steps:
       - -c
       - |
         set -euo pipefail
-        BUILD_ID=${BUILD_ID}
+        export BUILD_ID=$_BUILD_ID
         gsutil cp tfplan.binary gs://thotaterra/terraform-plans/${BUILD_ID}.binary
         gsutil cp tfplan.json gs://thotaterra/terraform-plans/${BUILD_ID}.json
         echo "Plan files uploaded with BUILD_ID: ${BUILD_ID}"
@@ -75,6 +81,7 @@ steps:
       - -c
       - |
         set -euo pipefail
+        export BUILD_ID=$_BUILD_ID
         echo "Waiting for approval..."
         while true; do
           if gsutil ls gs://thotaterra/terraform-approvals/approve-${BUILD_ID} &>/dev/null; then
@@ -96,6 +103,7 @@ steps:
       - -c
       - |
         set -euo pipefail
+        export BUILD_ID=$_BUILD_ID
         terraform apply -auto-approve tfplan.binary
 
   # ========== CLEANUP ==========
@@ -106,5 +114,6 @@ steps:
       - -c
       - |
         set -euo pipefail
+        export BUILD_ID=$_BUILD_ID
         gsutil rm gs://thotaterra/terraform-approvals/approve-${BUILD_ID} || true
         echo "Approval file removed"
