@@ -1,41 +1,31 @@
-options:
-  logging: CLOUD_LOGGING_ONLY
-
-availableSecrets:
-  secretManager:
-    - versionName: projects/vaulted-epigram-457004-c6/secrets/service-account-key/versions/latest
-      env: 'SERVICE_ACCOUNT_KEY'
-
-serviceAccount: 'terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceaccount.com'
-
 steps:
-  - name: hashicorp/terraform:1.5.7
-    id: Terraform Init
+  - name: 'hashicorp/terraform:1.5.7'
+    id: Terraform Init & Plan
     entrypoint: sh
     secretEnv: ['SERVICE_ACCOUNT_KEY']
     args:
       - -c
       - |
         echo "$$SERVICE_ACCOUNT_KEY" > key.json
-        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+        export GOOGLE_APPLICATION_CREDENTIALS=key.json
         terraform init \
           -backend-config="bucket=thotaterra" \
           -backend-config="prefix=terraform/state" \
           -reconfigure
+        terraform plan -out=tfplan
+        terraform show -no-color tfplan > plan_output.txt
+        cat plan_output.txt
 
-  - name: hashicorp/terraform:1.5.7
-    id: Terraform Plan
-    entrypoint: sh
-    secretEnv: ['SERVICE_ACCOUNT_KEY']
-    args:
-      - -c
-      - |
-        echo "$$SERVICE_ACCOUNT_KEY" > key.json
-        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
-        terraform plan -out=plan.tfplan -var-file="terraform.tfvars"
-        terraform show -no-color plan.tfplan > tfplan.txt
+  - name: 'gcr.io/cloud-builders/gsutil'
+    id: Upload Plan Output
+    args: ['cp', 'plan_output.txt', 'gs://thotaterra/plans/plan_output.txt']
 
-  - name: hashicorp/terraform:1.5.7
+# 👇 This marks a manual approval step
+approvals:
+  - approvalRequired: true
+
+# This step runs only after manual approval
+  - name: 'hashicorp/terraform:1.5.7'
     id: Terraform Apply
     entrypoint: sh
     secretEnv: ['SERVICE_ACCOUNT_KEY']
@@ -43,17 +33,13 @@ steps:
       - -c
       - |
         echo "$$SERVICE_ACCOUNT_KEY" > key.json
-        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
-        terraform apply -auto-approve plan.tfplan
+        export GOOGLE_APPLICATION_CREDENTIALS=key.json
+        terraform apply -auto-approve tfplan
 
-  - name: hashicorp/terraform:1.5.7
-    id: Terraform Output
-    waitFor: ['Terraform Apply']
-    entrypoint: sh
-    secretEnv: ['SERVICE_ACCOUNT_KEY']
-    args:
-      - -c
-      - |
-        echo "$$SERVICE_ACCOUNT_KEY" > key.json
-        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
-        terraform output
+availableSecrets:
+  secretManager:
+    - versionName: projects/vaulted-epigram-457004-c6/secrets/service-account-key/versions/latest
+      env: 'SERVICE_ACCOUNT_KEY'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
