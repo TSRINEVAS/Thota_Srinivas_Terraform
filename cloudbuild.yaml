@@ -20,13 +20,9 @@ steps:
     id: Upload Plan Output
     args: ['cp', 'plan_output.txt', 'gs://thotaterra/plans/plan_output.txt']
 
-# 👇 This marks a manual approval step
-approvals:
-  - approvalRequired: true
-
-# This step runs only after manual approval
   - name: 'hashicorp/terraform:1.5.7'
     id: Terraform Apply
+    waitFor: ['-']
     entrypoint: sh
     secretEnv: ['SERVICE_ACCOUNT_KEY']
     args:
