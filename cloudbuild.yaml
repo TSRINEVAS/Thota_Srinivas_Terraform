@@ -9,7 +9,6 @@ availableSecrets:
 serviceAccount: 'terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceaccount.com'
 
 steps:
-  # Step 1 - Setup Authentication
   - name: gcr.io/cloud-builders/gcloud
     id: Setup Auth
     entrypoint: sh
@@ -18,10 +17,9 @@ steps:
       - -c
       - |
         echo "Writing service account key to file..."
-        printf "%s" "$SERVICE_ACCOUNT_KEY" > key.json
+        printf "%s" "$$SERVICE_ACCOUNT_KEY" > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
 
-  # Step 2 - Terraform Init
   - name: hashicorp/terraform:1.5.7
     id: Terraform Init
     entrypoint: sh
@@ -36,7 +34,6 @@ steps:
           -backend-config="prefix=terraform/state" \
           -reconfigure
 
-  # Step 3 - Terraform Plan and Save Output
   - name: hashicorp/terraform:1.5.7
     id: Terraform Plan
     entrypoint: sh
@@ -48,38 +45,8 @@ steps:
         echo "Running Terraform Plan..."
         terraform plan -var-file="terraform.tfvars" > terraform_plan_output.txt
 
-  # Step 4 - Upload Plan to GCS
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: Upload Plan Log to GCS
     entrypoint: bash
     args:
       - -c
-      - |
-        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
-
-        echo "Uploading terraform_plan_output.txt to GCS bucket..."
-        gsutil cp terraform_plan_output.txt gs://thotaterra/terraform-plans/terraform_plan_output-$(date +%Y%m%d%H%M%S).txt
-
-  # Step 5 - Terraform Apply
-  - name: hashicorp/terraform:1.5.7
-    id: Terraform Apply
-    entrypoint: sh
-    args:
-      - -c
-      - |
-        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
-
-        echo "Applying Terraform infrastructure..."
-        terraform apply -var-file="terraform.tfvars" -auto-approve
-
-  # Step 6 - Terraform Output
-  - name: hashicorp/terraform:1.5.7
-    id: Terraform Output
-    entrypoint: sh
-    args:
-      - -c
-      - |
-        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
-
-        echo "Showing Terraform Outputs..."
-        terraform output
