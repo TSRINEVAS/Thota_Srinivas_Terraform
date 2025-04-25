@@ -17,3 +17,14 @@ module "firewall_ssh" {
   source_ranges = ["0.0.0.0/0"]      # You can limit to a known IP range
   target_tags   = ["ssh-enabled"]   # Attach this to instances if needed
 }
+module "compute_instance" {
+  source        = "./modules/compute_instance"
+  name          = "sample-vm"
+  machine_type  = "e2-medium"
+  zone          = var.gcp_zone
+  boot_image    = "debian-cloud/debian-11"
+  network       = module.network.vpc_name
+  subnetwork    = module.network.subnet_name
+  startup_script = "echo Hello from Terraform > /var/tmp/hello.txt"
+}
+
