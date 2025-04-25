@@ -9,69 +9,79 @@ availableSecrets:
 serviceAccount: 'terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceaccount.com'
 
 steps:
-  - name: hashicorp/terraform:1.5.7
-    id: Terraform Init
+  # Step 1 - Setup Authentication
+  - name: gcr.io/cloud-builders/gcloud
+    id: Setup Auth
     entrypoint: sh
     secretEnv: ['SERVICE_ACCOUNT_KEY']
     args:
       - -c
       - |
+        echo "Writing service account key to file..."
         printf "%s" "$SERVICE_ACCOUNT_KEY" > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
 
-        echo "Initializing Terraform..."
+  # Step 2 - Terraform Init
+  - name: hashicorp/terraform:1.5.7
+    id: Terraform Init
+    entrypoint: sh
+    args:
+      - -c
+      - |
+        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+
+        echo "Initializing Terraform backend..."
         terraform init \
           -backend-config="bucket=thotaterra" \
           -backend-config="prefix=terraform/state" \
           -reconfigure
 
+  # Step 3 - Terraform Plan and Save Plan Output
   - name: hashicorp/terraform:1.5.7
     id: Terraform Plan
     entrypoint: sh
-    secretEnv: ['SERVICE_ACCOUNT_KEY']
     args:
       - -c
       - |
-        printf "%s" "$SERVICE_ACCOUNT_KEY" > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
 
-        echo "Running Terraform Plan and saving output to txt..."
+        echo "Running Terraform Plan and saving output..."
         terraform plan -var-file="terraform.tfvars" > terraform_plan_output.txt
 
+  # Step 4 - Upload Plan Output to GCS
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: Upload Plan Log to GCS
     entrypoint: bash
-    secretEnv: ['SERVICE_ACCOUNT_KEY']
     args:
       - -c
       - |
-        printf "%s" "$SERVICE_ACCOUNT_KEY" > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
 
         echo "Uploading terraform_plan_output.txt to GCS bucket..."
         gsutil cp terraform_plan_output.txt gs://thotaterra/terraform-plans/terraform_plan_output-$(date +%Y%m%d%H%M%S).txt
 
+  # Optional - Approval happens here manually at trigger level
+  # Configure "Require Approval" manually at trigger, not in YAML
+
+  # Step 5 - Terraform Apply
   - name: hashicorp/terraform:1.5.7
     id: Terraform Apply
     entrypoint: sh
-    secretEnv: ['SERVICE_ACCOUNT_KEY']
     args:
       - -c
       - |
-        printf "%s" "$SERVICE_ACCOUNT_KEY" > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
 
-        echo "Applying Terraform-managed infrastructure..."
+        echo "Applying Terraform..."
         terraform apply -var-file="terraform.tfvars" -auto-approve
 
+  # Step 6 - Terraform Output
   - name: hashicorp/terraform:1.5.7
     id: Terraform Output
     entrypoint: sh
-    secretEnv: ['SERVICE_ACCOUNT_KEY']
     args:
       - -c
       - |
-        printf "%s" "$SERVICE_ACCOUNT_KEY" > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
 
         echo "Showing Terraform Outputs..."
