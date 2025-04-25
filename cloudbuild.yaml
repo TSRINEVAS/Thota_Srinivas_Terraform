@@ -10,14 +10,14 @@ serviceAccount: 'terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceac
 
 steps:
   - name: hashicorp/terraform:1.5.7
-    id: Terraform Init
+    id: Terraform Init and Plan
     entrypoint: sh
     secretEnv: ['SERVICE_ACCOUNT_KEY']
     args:
       - -c
       - |
         echo "Writing service account key to file..."
-        echo "$$SERVICE_ACCOUNT_KEY" > key.json
+        echo $$SERVICE_ACCOUNT_KEY > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
 
         echo "Initializing Terraform..."
@@ -26,6 +26,9 @@ steps:
           -backend-config="prefix=terraform/state" \
           -reconfigure
 
+        echo "Running Terraform plan..."
+        terraform plan -var-file="terraform.tfvars" -out=tfplan
+
   - name: hashicorp/terraform:1.5.7
     id: Terraform Apply
     entrypoint: sh
@@ -33,23 +36,12 @@ steps:
     args:
       - -c
       - |
-        echo "$$SERVICE_ACCOUNT_KEY" > key.json
+        echo "Writing service account key to file..."
+        echo $$SERVICE_ACCOUNT_KEY > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
 
         echo "Applying Terraform-managed infrastructure..."
-        terraform apply -var-file="terraform.tfvars" -auto-approve
-        # Optionally add target if needed:
-        # terraform destroy -target=module.firewall_ssh_http -var-file="terraform.tfvars" -auto-approve
-
-  - name: hashicorp/terraform:1.5.7
-    id: Terraform Output Logs
-    entrypoint: sh
-    secretEnv: ['SERVICE_ACCOUNT_KEY']
-    args:
-      - -c
-      - |
-        echo "$$SERVICE_ACCOUNT_KEY" > key.json
-        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
-
-        echo "Logging Terraform outputs..."
-        terraform output
+        terraform apply tfplan
+    approval:
+      approvers:
+        - user: 'your-email@example.com'
