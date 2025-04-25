@@ -44,4 +44,4 @@ steps:
         terraform apply tfplan
     approval:
       approvers:
-        - user: 'your-email@example.com'
+        - user: 'tsrinevas@gmail.com'
