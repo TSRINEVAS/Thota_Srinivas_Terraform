@@ -1,30 +1,70 @@
-provider "google" {
-  project = var.project_id
-  region  = var.region
-}
+options:
+  logging: CLOUD_LOGGING_ONLY
 
-module "network" {
-  source       = "./modules/network"  # the correct relative/remote path
-  vpc_name     = var.vpc_name
-  subnet_name  = var.subnet_name
-  subnet_cidr  = var.subnet_cidr
-  region       = var.region
-}
-module "firewall_ssh" {
-  source        = "./modules/firewall"
-  name          = "allow-ssh-ingress"
-  network       = module.network.vpc_self_link
-  source_ranges = ["0.0.0.0/0"]      # You can limit to a known IP range
-  target_tags   = ["ssh-enabled"]   # Attach this to instances if needed
-}
-module "compute_instance" {
-  source        = "./modules/compute_instance"
-  name          = "sample-vm"
-  machine_type  = "e2-medium"
-  zone          = var.gcp_zone
-  boot_image    = "debian-cloud/debian-11"
-  network       = module.network.vpc_name
-  subnetwork    = module.network.subnet_name
-  startup_script = "echo Hello from Terraform > /var/tmp/hello.txt"
-}
+availableSecrets:
+  secretManager:
+    - versionName: projects/vaulted-epigram-457004-c6/secrets/service-account-key/versions/latest
+      env: 'SERVICE_ACCOUNT_KEY'
 
+serviceAccount: 'terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceaccount.com'
+
+steps:
+  - name: gcr.io/cloud-builders/gcloud
+    id: Setup Auth
+    entrypoint: sh
+    secretEnv: ['SERVICE_ACCOUNT_KEY']
+    args:
+      - -c
+      - |
+        echo "$$SERVICE_ACCOUNT_KEY" > key.json
+        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+
+  - name: hashicorp/terraform:1.5.7
+    id: Terraform Init
+    entrypoint: sh
+    args:
+      - -c
+      - |
+        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+        terraform init \
+          -backend-config="bucket=thotaterra" \
+          -backend-config="prefix=terraform/state" \
+          -reconfigure
+
+  - name: hashicorp/terraform:1.5.7
+    id: Terraform Plan
+    entrypoint: sh
+    args:
+      - -c
+      - |
+        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+        terraform plan -var-file="terraform.tfvars" > plan_output.txt
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: Upload Plan Logs
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+        gsutil cp plan_output.txt gs://thotaterra/terraform-plans/plan_output-$(date +%Y%m%d%H%M%S).txt
+
+  # After this, pipeline will pause if trigger has 'approval required'
+
+  - name: hashicorp/terraform:1.5.7
+    id: Terraform Apply
+    entrypoint: sh
+    args:
+      - -c
+      - |
+        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+        terraform apply -var-file="terraform.tfvars" -auto-approve
+
+  - name: hashicorp/terraform:1.5.7
+    id: Terraform Output
+    entrypoint: sh
+    args:
+      - -c
+      - |
+        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+        terraform output
