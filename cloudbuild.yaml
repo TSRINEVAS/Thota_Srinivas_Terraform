@@ -16,8 +16,7 @@ steps:
     args:
       - -c
       - |
-        echo "Writing service account key to file..."
-        echo "$$SERVICE_ACCOUNT_KEY" > key.json
+        printf "%s" "$SERVICE_ACCOUNT_KEY" > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
 
         echo "Initializing Terraform..."
@@ -27,29 +26,53 @@ steps:
           -reconfigure
 
   - name: hashicorp/terraform:1.5.7
+    id: Terraform Plan
+    entrypoint: sh
+    secretEnv: ['SERVICE_ACCOUNT_KEY']
+    args:
+      - -c
+      - |
+        printf "%s" "$SERVICE_ACCOUNT_KEY" > key.json
+        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+
+        echo "Running Terraform Plan and saving output to txt..."
+        terraform plan -var-file="terraform.tfvars" > terraform_plan_output.txt
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: Upload Plan Log to GCS
+    entrypoint: bash
+    secretEnv: ['SERVICE_ACCOUNT_KEY']
+    args:
+      - -c
+      - |
+        printf "%s" "$SERVICE_ACCOUNT_KEY" > key.json
+        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+
+        echo "Uploading terraform_plan_output.txt to GCS bucket..."
+        gsutil cp terraform_plan_output.txt gs://thotaterra/terraform-plans/terraform_plan_output-$(date +%Y%m%d%H%M%S).txt
+
+  - name: hashicorp/terraform:1.5.7
     id: Terraform Apply
     entrypoint: sh
     secretEnv: ['SERVICE_ACCOUNT_KEY']
     args:
       - -c
       - |
-        echo "$$SERVICE_ACCOUNT_KEY" > key.json
+        printf "%s" "$SERVICE_ACCOUNT_KEY" > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
 
         echo "Applying Terraform-managed infrastructure..."
         terraform apply -var-file="terraform.tfvars" -auto-approve
-        # Optionally add target if needed:
-        # terraform destroy -target=module.firewall_ssh_http -var-file="terraform.tfvars" -auto-approve
 
   - name: hashicorp/terraform:1.5.7
-    id: Terraform Output Logs
+    id: Terraform Output
     entrypoint: sh
     secretEnv: ['SERVICE_ACCOUNT_KEY']
     args:
       - -c
       - |
-        echo "$$SERVICE_ACCOUNT_KEY" > key.json
+        printf "%s" "$SERVICE_ACCOUNT_KEY" > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
 
-        echo "Logging Terraform outputs..."
+        echo "Showing Terraform Outputs..."
         terraform output
