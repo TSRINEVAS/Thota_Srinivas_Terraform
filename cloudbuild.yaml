@@ -34,7 +34,6 @@ steps:
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
         terraform plan -out=plan.tfplan -var-file="terraform.tfvars"
         terraform show -no-color plan.tfplan > tfplan.txt
-
     - name: hashicorp/terraform:1.5.7
     id: Terraform Apply
     waitFor: ['Approval']
