@@ -35,15 +35,7 @@ steps:
         terraform plan -out=plan.tfplan -var-file="terraform.tfvars"
         terraform show -no-color plan.tfplan > tfplan.txt
 
-  - name: gcr.io/cloud-builders/gcloud
-    id: Approval
-    waitFor: ['Terraform Plan']
-    args:
-      - beta
-      - builds
-      - wait-for-approval
-
-  - name: hashicorp/terraform:1.5.7
+    - name: hashicorp/terraform:1.5.7
     id: Terraform Apply
     waitFor: ['Approval']
     entrypoint: sh
