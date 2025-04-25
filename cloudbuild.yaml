@@ -1,7 +1,5 @@
 options:
   logging: CLOUD_LOGGING_ONLY
-  # IMPORTANT: Needed to use "approval"
-  requestedVerifyOption: VERIFIED
 
 availableSecrets:
   secretManager:
@@ -40,18 +38,22 @@ steps:
       - -c
       - |
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
-        terraform plan -var-file="terraform.tfvars"
+        terraform plan -var-file="terraform.tfvars" > plan_output.txt
 
-  - id: Manual Approval
-    waitFor:
-      - Terraform Plan
-    approvalRequired: true
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: Upload Plan Logs
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+        gsutil cp plan_output.txt gs://thotaterra/terraform-plans/plan_output-$(date +%Y%m%d%H%M%S).txt
+
+  # After this, pipeline will pause if trigger has 'approval required'
 
   - name: hashicorp/terraform:1.5.7
     id: Terraform Apply
     entrypoint: sh
-    waitFor:
-      - Manual Approval
     args:
       - -c
       - |
