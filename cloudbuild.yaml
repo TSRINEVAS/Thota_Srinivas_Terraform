@@ -4,7 +4,7 @@ options:
 availableSecrets:
   secretManager:
     - versionName: projects/vaulted-epigram-457004-c6/secrets/service-account-key/versions/latest
-      env: 'SERVICE_ACCOUNT_KEY'
+      env: SERVICE_ACCOUNT_KEY
 
 serviceAccount: 'terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceaccount.com'
 
@@ -13,7 +13,7 @@ steps:
   - name: gcr.io/cloud-builders/gcloud
     id: Setup Auth
     entrypoint: sh
-    secretEnv: ['SERVICE_ACCOUNT_KEY']
+    secretEnv: [SERVICE_ACCOUNT_KEY]
     args:
       - -c
       - |
@@ -36,7 +36,7 @@ steps:
           -backend-config="prefix=terraform/state" \
           -reconfigure
 
-  # Step 3 - Terraform Plan and Save Plan Output
+  # Step 3 - Terraform Plan and Save Output
   - name: hashicorp/terraform:1.5.7
     id: Terraform Plan
     entrypoint: sh
@@ -45,10 +45,10 @@ steps:
       - |
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
 
-        echo "Running Terraform Plan and saving output..."
+        echo "Running Terraform Plan..."
         terraform plan -var-file="terraform.tfvars" > terraform_plan_output.txt
 
-  # Step 4 - Upload Plan Output to GCS
+  # Step 4 - Upload Plan to GCS
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: Upload Plan Log to GCS
     entrypoint: bash
@@ -60,9 +60,6 @@ steps:
         echo "Uploading terraform_plan_output.txt to GCS bucket..."
         gsutil cp terraform_plan_output.txt gs://thotaterra/terraform-plans/terraform_plan_output-$(date +%Y%m%d%H%M%S).txt
 
-  # Optional - Approval happens here manually at trigger level
-  # Configure "Require Approval" manually at trigger, not in YAML
-
   # Step 5 - Terraform Apply
   - name: hashicorp/terraform:1.5.7
     id: Terraform Apply
@@ -72,7 +69,7 @@ steps:
       - |
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
 
-        echo "Applying Terraform..."
+        echo "Applying Terraform infrastructure..."
         terraform apply -var-file="terraform.tfvars" -auto-approve
 
   # Step 6 - Terraform Output
