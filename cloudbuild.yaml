@@ -9,62 +9,47 @@ availableSecrets:
 serviceAccount: 'terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceaccount.com'
 
 steps:
-  - name: gcr.io/cloud-builders/gcloud
-    id: Setup Auth
+  - name: hashicorp/terraform:1.5.7
+    id: Terraform Init
     entrypoint: sh
     secretEnv: ['SERVICE_ACCOUNT_KEY']
     args:
       - -c
       - |
-        printf "%s" "$SERVICE_ACCOUNT_KEY" > key.json
+        echo "Writing service account key to file..."
+        echo "$$SERVICE_ACCOUNT_KEY" > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
 
-  - name: hashicorp/terraform:1.5.7
-    id: Terraform Init
-    entrypoint: sh
-    args:
-      - -c
-      - |
-        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+        echo "Initializing Terraform..."
         terraform init \
           -backend-config="bucket=thotaterra" \
           -backend-config="prefix=terraform/state" \
           -reconfigure
 
   - name: hashicorp/terraform:1.5.7
-    id: Terraform Plan
-    entrypoint: sh
-    args:
-      - -c
-      - |
-        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
-        terraform plan -var-file="terraform.tfvars" > plan_output.txt
-
-  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
-    id: Upload Plan Logs
-    entrypoint: bash
-    args:
-      - -c
-      - |
-        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
-        gsutil cp plan_output.txt gs://thotaterra/terraform-plans/plan_output-$(date +%Y%m%d%H%M%S).txt
-
-  # After this, pipeline will pause if trigger has 'approval required'
-
-  - name: hashicorp/terraform:1.5.7
     id: Terraform Apply
     entrypoint: sh
+    secretEnv: ['SERVICE_ACCOUNT_KEY']
     args:
       - -c
       - |
+        echo "$$SERVICE_ACCOUNT_KEY" > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+
+        echo "Applying Terraform-managed infrastructure..."
         terraform apply -var-file="terraform.tfvars" -auto-approve
+        # Optionally add target if needed:
+        # terraform destroy -target=module.firewall_ssh_http -var-file="terraform.tfvars" -auto-approve
 
   - name: hashicorp/terraform:1.5.7
-    id: Terraform Output
+    id: Terraform Output Logs
     entrypoint: sh
+    secretEnv: ['SERVICE_ACCOUNT_KEY']
     args:
       - -c
       - |
+        echo "$$SERVICE_ACCOUNT_KEY" > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+
+        echo "Logging Terraform outputs..."
         terraform output
