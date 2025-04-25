@@ -8,7 +8,7 @@ variable "region" {
 variable "gcp_zone" {
     type = string
     description = "The primary GCP zone within the region to be used"
-    default = "us-west1-a"
+    default = "us-central1-a"
 }
 
 variable "vpc_name" {
