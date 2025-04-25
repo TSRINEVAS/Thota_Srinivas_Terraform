@@ -1,5 +1,7 @@
 options:
   logging: CLOUD_LOGGING_ONLY
+  # IMPORTANT: Needed to use "approval"
+  requestedVerifyOption: VERIFIED
 
 availableSecrets:
   secretManager:
@@ -9,47 +11,58 @@ availableSecrets:
 serviceAccount: 'terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceaccount.com'
 
 steps:
-  - name: hashicorp/terraform:1.5.7
-    id: Terraform Init
+  - name: gcr.io/cloud-builders/gcloud
+    id: Setup Auth
     entrypoint: sh
     secretEnv: ['SERVICE_ACCOUNT_KEY']
     args:
       - -c
       - |
-        echo "Writing service account key to file..."
         echo "$$SERVICE_ACCOUNT_KEY" > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
 
-        echo "Initializing Terraform..."
+  - name: hashicorp/terraform:1.5.7
+    id: Terraform Init
+    entrypoint: sh
+    args:
+      - -c
+      - |
+        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
         terraform init \
           -backend-config="bucket=thotaterra" \
           -backend-config="prefix=terraform/state" \
           -reconfigure
 
   - name: hashicorp/terraform:1.5.7
-    id: Terraform Apply
+    id: Terraform Plan
     entrypoint: sh
-    secretEnv: ['SERVICE_ACCOUNT_KEY']
     args:
       - -c
       - |
-        echo "$$SERVICE_ACCOUNT_KEY" > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+        terraform plan -var-file="terraform.tfvars"
 
-        echo "Applying Terraform-managed infrastructure..."
-        terraform apply -var-file="terraform.tfvars" -auto-approve
-        # Optionally add target if needed:
-        # terraform destroy -target=module.firewall_ssh_http -var-file="terraform.tfvars" -auto-approve
+  - id: Manual Approval
+    waitFor:
+      - Terraform Plan
+    approvalRequired: true
 
   - name: hashicorp/terraform:1.5.7
-    id: Terraform Output Logs
+    id: Terraform Apply
     entrypoint: sh
-    secretEnv: ['SERVICE_ACCOUNT_KEY']
+    waitFor:
+      - Manual Approval
     args:
       - -c
       - |
-        echo "$$SERVICE_ACCOUNT_KEY" > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+        terraform apply -var-file="terraform.tfvars" -auto-approve
 
-        echo "Logging Terraform outputs..."
+  - name: hashicorp/terraform:1.5.7
+    id: Terraform Output
+    entrypoint: sh
+    args:
+      - -c
+      - |
+        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
         terraform output
