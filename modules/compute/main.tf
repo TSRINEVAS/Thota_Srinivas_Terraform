@@ -16,4 +16,6 @@ resource "google_compute_instance" "vm_instance" {
   }
 
   metadata_startup_script = var.startup_script
+
+  deletion_protection = true
 }
