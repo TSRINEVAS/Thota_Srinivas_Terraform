@@ -16,7 +16,7 @@ steps:
     args:
       - -c
       - |
-        echo "$$SERVICE_ACCOUNT_KEY" > key.json
+        printf "%s" "$SERVICE_ACCOUNT_KEY" > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
 
   - name: hashicorp/terraform:1.5.7
