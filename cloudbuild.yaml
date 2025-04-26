@@ -1,3 +1,5 @@
+timeout: 1200s  # 20 min max build timeout
+
 options:
   logging: CLOUD_LOGGING_ONLY
   machineType: E2_HIGHCPU_8
@@ -17,77 +19,100 @@ availableSecrets:
 serviceAccount: 'terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceaccount.com'
 
 steps:
-  # ========== SETUP & PLAN PHASE ==========
+  # ========== SETUP AUTH ==========
   - name: gcr.io/cloud-builders/gcloud
     id: Setup Auth
     entrypoint: bash
     secretEnv: [SERVICE_ACCOUNT_KEY]
+    env:
+      - GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+      - BUILD_ID=$_BUILD_ID
     args:
       - -c
       - |
         set -euo pipefail
         echo "$$SERVICE_ACCOUNT_KEY" > /workspace/key.json
         chmod 600 /workspace/key.json
-        export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
         gcloud auth activate-service-account --key-file=/workspace/key.json
-        export BUILD_ID=$_BUILD_ID
 
+  # ========== TERRAFORM INIT ==========
   - name: hashicorp/terraform:1.5.7
     id: Terraform Init
     entrypoint: bash
+    env:
+      - GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+      - BUILD_ID=$_BUILD_ID
     args:
       - -c
       - |
         set -euo pipefail
-        export BUILD_ID=$_BUILD_ID
         terraform init \
           -backend-config="bucket=thotaterra" \
           -backend-config="prefix=terraform/state" \
           -reconfigure \
           -upgrade
 
+  # ========== TERRAFORM PLAN ==========
   - name: hashicorp/terraform:1.5.7
     id: Terraform Plan
     entrypoint: bash
+    env:
+      - GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+      - BUILD_ID=$_BUILD_ID
     args:
       - -c
       - |
         set -euo pipefail
-        export BUILD_ID=$_BUILD_ID
         terraform plan \
           -var-file="terraform.tfvars" \
           -out=tfplan.binary \
           -detailed-exitcode || [ $? -eq 2 ]
         terraform show -json tfplan.binary > tfplan.json
 
+  # ========== UPLOAD PLAN ==========
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: Upload Plan
     entrypoint: bash
+    env:
+      - GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+      - BUILD_ID=$_BUILD_ID
     args:
       - -c
       - |
         set -euo pipefail
-        export BUILD_ID=$_BUILD_ID
         gsutil cp tfplan.binary gs://thotaterra/terraform-plans/${BUILD_ID}.binary
         gsutil cp tfplan.json gs://thotaterra/terraform-plans/${BUILD_ID}.json
         echo "Plan files uploaded with BUILD_ID: ${BUILD_ID}"
         echo "Please review and create an empty file named 'approve-${BUILD_ID}' in gs://thotaterra/terraform-approvals/ to proceed"
 
-  # ========== APPROVAL CHECK ==========
+  # ========== WAIT FOR APPROVAL ==========
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: Wait for Approval
     entrypoint: bash
+    env:
+      - GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+      - BUILD_ID=$_BUILD_ID
     args:
       - -c
       - |
         set -euo pipefail
-        export BUILD_ID=$_BUILD_ID
         echo "Waiting for approval..."
+        START_TIME=$(date +%s)
+        TIMEOUT_SECONDS=7200  # 2 hours
+
         while true; do
           if gsutil ls gs://thotaterra/terraform-approvals/approve-${BUILD_ID} &>/dev/null; then
             echo "Approval detected, proceeding with apply"
             break
           fi
+
+          CURRENT_TIME=$(date +%s)
+          ELAPSED=$((CURRENT_TIME - START_TIME))
+          if [ "$ELAPSED" -ge "$TIMEOUT_SECONDS" ]; then
+            echo "Timeout reached. No approval given. Exiting."
+            exit 1
+          fi
+
           echo "Approval not found. Checking again in 30 seconds..."
           sleep 30
         done
@@ -95,25 +120,29 @@ steps:
         # Download the approved plan
         gsutil cp gs://thotaterra/terraform-plans/${BUILD_ID}.binary tfplan.binary
 
-  # ========== APPLY PHASE ==========
+  # ========== TERRAFORM APPLY ==========
   - name: hashicorp/terraform:1.5.7
     id: Terraform Apply
     entrypoint: bash
+    env:
+      - GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+      - BUILD_ID=$_BUILD_ID
     args:
       - -c
       - |
         set -euo pipefail
-        export BUILD_ID=$_BUILD_ID
         terraform apply -auto-approve tfplan.binary
 
-  # ========== CLEANUP ==========
+  # ========== CLEANUP APPROVAL ==========
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: Cleanup Approval
     entrypoint: bash
+    env:
+      - GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+      - BUILD_ID=$_BUILD_ID
     args:
       - -c
       - |
         set -euo pipefail
-        export BUILD_ID=$_BUILD_ID
         gsutil rm gs://thotaterra/terraform-approvals/approve-${BUILD_ID} || true
         echo "Approval file removed"
