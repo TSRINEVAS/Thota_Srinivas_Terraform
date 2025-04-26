@@ -1,4 +1,4 @@
-timeout: 1200s  # 20 min max build timeout
+timeout: 1200s  # 20 min build timeout
 
 options:
   logging: CLOUD_LOGGING_ONLY
@@ -83,7 +83,7 @@ steps:
       gsutil cp tfplan.binary gs://thotaterra/terraform-plans/${_BUILD_ID}.binary
       gsutil cp tfplan.json gs://thotaterra/terraform-plans/${_BUILD_ID}.json
       echo "Terraform plan uploaded successfully."
-      echo "To approve, create an empty file named approve-${_BUILD_ID} inside gs://thotaterra/terraform-approvals/."
+      echo "To approve, create an empty file named approve-${_BUILD_ID} in gs://thotaterra/terraform-approvals/."
 
 # ========== WAIT FOR APPROVAL ==========
 - name: gcr.io/google.com/cloudsdktool/cloud-sdk
@@ -111,11 +111,10 @@ steps:
           echo "Timeout reached without approval. Exiting."
           exit 1
         fi
-        echo "Approval not yet found. Checking again in 30 seconds..."
+        echo "Approval not yet found after $${ELAPSED} seconds. Checking again in 30 seconds..."
         sleep 30
       done
 
-      # Download the approved tfplan
       gsutil cp gs://thotaterra/terraform-plans/${_BUILD_ID}.binary tfplan.binary
 
 # ========== TERRAFORM APPLY ==========
