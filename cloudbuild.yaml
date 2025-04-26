@@ -35,9 +35,11 @@ steps:
         set -euo pipefail
         echo "Validating GCS bucket exists..."
         gsutil ls gs://${_GCS_BUCKET} || { echo "Bucket ${_GCS_BUCKET} not found"; exit 1; }
-        echo "Creating approval directory if needed..."
+        echo "Creating directories if needed..."
         gsutil -m stat gs://${_GCS_BUCKET}/${_APPROVALS_PATH}/ || \
           gsutil -m mkdir gs://${_GCS_BUCKET}/${_APPROVALS_PATH}/
+        gsutil -m stat gs://${_GCS_BUCKET}/${_PLANS_PATH}/ || \
+          gsutil -m mkdir gs://${_GCS_BUCKET}/${_PLANS_PATH}/
 
   # ========== AUTH SETUP ==========
   - name: gcr.io/cloud-builders/gcloud
@@ -68,6 +70,16 @@ steps:
           -reconfigure \
           -upgrade
 
+  # ========== TERRAFORM VALIDATE ==========
+  - name: hashicorp/terraform:1.5.7
+    id: Terraform Validate
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        terraform validate
+
   # ========== TERRAFORM PLAN ==========
   - name: hashicorp/terraform:1.5.7
     id: Terraform Plan
@@ -76,7 +88,6 @@ steps:
       - -c
       - |
         set -euo pipefail
-        terraform validate
         terraform plan \
           -var-file="terraform.tfvars" \
           -out=tfplan.binary \
@@ -93,12 +104,12 @@ steps:
         set -euo pipefail
         gsutil -m cp tfplan.binary gs://${_GCS_BUCKET}/${_PLANS_PATH}/${_BUILD_ID}.binary
         gsutil -m cp tfplan.json gs://${_GCS_BUCKET}/${_PLANS_PATH}/${_BUILD_ID}.json
-        echo "Terraform plan uploaded to:"
-        echo "  - gs://${_GCS_BUCKET}/${_PLANS_PATH}/${_BUILD_ID}.binary"
-        echo "  - gs://${_GCS_BUCKET}/${_PLANS_PATH}/${_BUILD_ID}.json"
+        echo "Terraform plan artifacts:"
+        echo "Binary: gs://${_GCS_BUCKET}/${_PLANS_PATH}/${_BUILD_ID}.binary"
+        echo "JSON:  gs://${_GCS_BUCKET}/${_PLANS_PATH}/${_BUILD_ID}.json"
         echo ""
-        echo "To approve, run:"
-        echo "  gsutil touch gs://${_GCS_BUCKET}/${_APPROVALS_PATH}/approve-${_BUILD_ID}"
+        echo "To approve this build, run:"
+        echo "gsutil touch gs://${_GCS_BUCKET}/${_APPROVALS_PATH}/approve-${_BUILD_ID}"
 
   # ========== APPROVAL GATE ==========
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
@@ -108,21 +119,29 @@ steps:
       - -c
       - |
         set -euo pipefail
-        echo "Waiting for approval (timeout: ${_APPROVAL_TIMEOUT}s)..."
-        TIMEOUT=$((SECONDS + ${_APPROVAL_TIMEOUT}))
+        echo "Waiting for approval (Timeout: ${_APPROVAL_TIMEOUT}s)..."
         
-        while [ $SECONDS -lt $TIMEOUT ]; do
+        START_TIME=$(date +%s)
+        TIMEOUT_SECONDS=${_APPROVAL_TIMEOUT}
+        
+        while true; do
+          CURRENT_TIME=$(date +%s)
+          ELAPSED=$((CURRENT_TIME - START_TIME))
+          
+          if [ "$ELAPSED" -ge "$TIMEOUT_SECONDS" ]; then
+            echo "Timeout reached without approval. Exiting."
+            exit 1
+          fi
+          
           if gsutil -q stat gs://${_GCS_BUCKET}/${_APPROVALS_PATH}/approve-${_BUILD_ID}; then
             echo "Approval detected. Downloading plan..."
             gsutil cp gs://${_GCS_BUCKET}/${_PLANS_PATH}/${_BUILD_ID}.binary tfplan.binary
-            exit 0
+            break
           fi
-          echo "Waiting... ($((TIMEOUT - SECONDS))s remaining)"
+          
+          echo "Waiting... ($((TIMEOUT_SECONDS - ELAPSED))s remaining)"
           sleep 30
         done
-        
-        echo "Timeout reached without approval. Failing build."
-        exit 1
 
   # ========== TERRAFORM APPLY ==========
   - name: hashicorp/terraform:1.5.7
@@ -134,7 +153,7 @@ steps:
         set -euo pipefail
         terraform apply -auto-approve tfplan.binary
 
-  # ========== POST-APPLY CLEANUP ==========
+  # ========== CLEANUP ==========
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: Cleanup Approval
     entrypoint: bash
@@ -144,5 +163,5 @@ steps:
         set -euo pipefail
         echo "Cleaning up approval file..."
         gsutil rm gs://${_GCS_BUCKET}/${_APPROVALS_PATH}/approve-${_BUILD_ID} || \
-          echo "No approval file to cleanup"
+          echo "No approval file found (already cleaned up)"
         echo "Build completed successfully"
