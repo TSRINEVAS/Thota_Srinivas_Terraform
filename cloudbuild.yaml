@@ -111,7 +111,7 @@ steps:
           echo "Timeout reached without approval. Exiting."
           exit 1
         fi
-        echo "Approval not yet found after $${ELAPSED} seconds. Checking again in 30 seconds..."
+        echo Approval not yet found after $ELAPSED seconds. Checking again in 30 seconds...
         sleep 30
       done
 
