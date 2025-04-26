@@ -59,8 +59,8 @@ steps:
 
         echo "Checking if terraform_plan_output.txt exists..."
         if [ -f terraform_plan_output.txt ]; then
-          echo "Uploading plan output to GCS bucket..."
-          gsutil cp terraform_plan_output.txt gs://thotaterra/terraform-plans/terraform_plan_output-$(date +%Y%m%d%H%M%S).txt
+          echo "Uploading plan output to GCS bucket with commit SHA..."
+          gsutil cp terraform_plan_output.txt gs://thotaterra/terraform-plans/terraform_plan_output-${COMMIT_SHA}.txt
         else
           echo "Plan output file not found! Skipping upload."
           exit 1
