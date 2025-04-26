@@ -17,7 +17,6 @@ steps:
     args:
       - -c
       - |
-        echo "Writing service account key to file..."
         printf "%s" "$$SERVICE_ACCOUNT_KEY" > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
 
@@ -29,14 +28,9 @@ steps:
       - -c
       - |
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+        terraform init -backend-config="bucket=thotaterra" -backend-config="prefix=terraform/state" -reconfigure
 
-        echo "Initializing Terraform..."
-        terraform init \
-          -backend-config="bucket=thotaterra" \
-          -backend-config="prefix=terraform/state" \
-          -reconfigure
-
-  # Step 2: Terraform Plan (Save to .txt file)
+  # Step 2: Terraform Plan
   - name: hashicorp/terraform:1.5.7
     id: Terraform Plan
     entrypoint: sh
@@ -44,29 +38,30 @@ steps:
       - -c
       - |
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
-
-        echo "Running Terraform Plan..."
         terraform plan -var-file="terraform.tfvars" > terraform_plan_output.txt
 
-  # Step 3: Upload Plan Log to GCS
+  # Step 3: Upload Plan Output to GCS
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
-    id: Upload Plan Log to GCS
+    id: Upload Plan Output
     entrypoint: sh
     args:
       - -c
       - |
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
-
-        echo "Checking if terraform_plan_output.txt exists..."
         if [ -f terraform_plan_output.txt ]; then
-          echo "Uploading plan output to GCS bucket with commit SHA..."
           gsutil cp terraform_plan_output.txt gs://thotaterra/terraform-plans/terraform_plan_output-${COMMIT_SHA}.txt
         else
-          echo "Plan output file not found! Skipping upload."
+          echo "Plan output file missing."
           exit 1
         fi
 
-  # Step 4: Terraform Apply
+  # Step 4: Manual Approval Step
+  - name: "gcr.io/cloud-builders/gsutil"
+    id: Manual Approval
+    waitFor: ["-"]  # Special: this will wait for manual approval in Cloud Build UI
+    args: ["echo", "Waiting for manual approval before applying Terraform..."]
+
+  # Step 5: Terraform Apply
   - name: hashicorp/terraform:1.5.7
     id: Terraform Apply
     entrypoint: sh
@@ -74,11 +69,9 @@ steps:
       - -c
       - |
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
-
-        echo "Applying Terraform changes..."
         terraform apply -var-file="terraform.tfvars" -auto-approve
 
-  # Step 5: Terraform Output
+  # Step 6: Terraform Output
   - name: hashicorp/terraform:1.5.7
     id: Terraform Output
     entrypoint: sh
@@ -86,6 +79,4 @@ steps:
       - -c
       - |
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
-
-        echo "Displaying Terraform Outputs..."
         terraform output
