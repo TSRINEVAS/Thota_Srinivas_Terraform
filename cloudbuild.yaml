@@ -1,6 +1,5 @@
 options:
   logging: CLOUD_LOGGING_ONLY
-
 availableSecrets:
   secretManager:
     - versionName: projects/vaulted-epigram-457004-c6/secrets/service-account-key/versions/latest
