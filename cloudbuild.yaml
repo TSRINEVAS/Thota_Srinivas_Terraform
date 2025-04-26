@@ -80,10 +80,10 @@ steps:
     - -c
     - |
       set -euo pipefail
-      gsutil cp tfplan.binary gs://thotaterra/terraform-plans/${BUILD_ID}.binary
-      gsutil cp tfplan.json gs://thotaterra/terraform-plans/${BUILD_ID}.json
-      echo "Terraform plan uploaded. Awaiting manual approval."
-      echo "Create an empty file: 'approve-${BUILD_ID}' inside gs://thotaterra/terraform-approvals/ to approve."
+      gsutil cp tfplan.binary gs://thotaterra/terraform-plans/${_BUILD_ID}.binary
+      gsutil cp tfplan.json gs://thotaterra/terraform-plans/${_BUILD_ID}.json
+      echo "Terraform plan uploaded successfully."
+      echo "To approve, create an empty file named approve-${_BUILD_ID} inside gs://thotaterra/terraform-approvals/."
 
 # ========== WAIT FOR APPROVAL ==========
 - name: gcr.io/google.com/cloudsdktool/cloud-sdk
@@ -101,14 +101,14 @@ steps:
       TIMEOUT_SECONDS=7200  # 2 hours timeout
 
       while true; do
-        if gsutil ls gs://thotaterra/terraform-approvals/approve-${BUILD_ID} &>/dev/null; then
-          echo "Approval detected, proceeding with apply."
+        if gsutil ls gs://thotaterra/terraform-approvals/approve-${_BUILD_ID} &>/dev/null; then
+          echo "Approval detected. Proceeding to apply."
           break
         fi
         CURRENT_TIME=$(date +%s)
         ELAPSED=$((CURRENT_TIME - START_TIME))
         if [ "$ELAPSED" -ge "$TIMEOUT_SECONDS" ]; then
-          echo "Approval timeout reached. Exiting build."
+          echo "Timeout reached without approval. Exiting."
           exit 1
         fi
         echo "Approval not yet found. Checking again in 30 seconds..."
@@ -116,7 +116,7 @@ steps:
       done
 
       # Download the approved tfplan
-      gsutil cp gs://thotaterra/terraform-plans/${BUILD_ID}.binary tfplan.binary
+      gsutil cp gs://thotaterra/terraform-plans/${_BUILD_ID}.binary tfplan.binary
 
 # ========== TERRAFORM APPLY ==========
 - name: hashicorp/terraform:1.5.7
@@ -142,5 +142,5 @@ steps:
     - -c
     - |
       set -euo pipefail
-      gsutil rm gs://thotaterra/terraform-approvals/approve-${BUILD_ID} || true
+      gsutil rm gs://thotaterra/terraform-approvals/approve-${_BUILD_ID} || true
       echo "Approval file cleaned up."
