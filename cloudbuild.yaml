@@ -1,5 +1,6 @@
 options:
   logging: CLOUD_LOGGING_ONLY
+
 availableSecrets:
   secretManager:
     - versionName: projects/vaulted-epigram-457004-c6/secrets/service-account-key/versions/latest
@@ -16,6 +17,7 @@ steps:
     args:
       - -c
       - |
+        echo "Writing service account key to file..."
         printf "%s" "$$SERVICE_ACCOUNT_KEY" > key.json
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
 
@@ -27,7 +29,11 @@ steps:
       - -c
       - |
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
-        terraform init -backend-config="bucket=thotaterra" -backend-config="prefix=terraform/state" -reconfigure
+        echo "Initializing Terraform..."
+        terraform init \
+          -backend-config="bucket=thotaterra" \
+          -backend-config="prefix=terraform/state" \
+          -reconfigure
 
   # Step 2: Terraform Plan
   - name: hashicorp/terraform:1.5.7
@@ -37,6 +43,7 @@ steps:
       - -c
       - |
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+        echo "Running Terraform Plan..."
         terraform plan -var-file="terraform.tfvars" > terraform_plan_output.txt
 
   # Step 3: Upload Plan Output to GCS
@@ -47,6 +54,7 @@ steps:
       - -c
       - |
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+        echo "Uploading Plan Output..."
         if [ -f terraform_plan_output.txt ]; then
           gsutil cp terraform_plan_output.txt gs://thotaterra/terraform-plans/terraform_plan_output-${COMMIT_SHA}.txt
         else
@@ -55,10 +63,14 @@ steps:
         fi
 
   # Step 4: Manual Approval Step
-  - name: "gcr.io/cloud-builders/gsutil"
+  - name: gcr.io/cloud-builders/gcloud
     id: Manual Approval
-    waitFor: ["-"]  # Special: this will wait for manual approval in Cloud Build UI
-    args: ["echo", "Waiting for manual approval before applying Terraform..."]
+    waitFor: ["-"]  # This triggers manual approval in Cloud Build UI
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        echo "🛑 Waiting for manual approval... Please approve this build in Google Cloud Console."
 
   # Step 5: Terraform Apply
   - name: hashicorp/terraform:1.5.7
@@ -68,6 +80,7 @@ steps:
       - -c
       - |
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+        echo "Applying Terraform changes..."
         terraform apply -var-file="terraform.tfvars" -auto-approve
 
   # Step 6: Terraform Output
@@ -78,4 +91,5 @@ steps:
       - -c
       - |
         export GOOGLE_APPLICATION_CREDENTIALS=/workspace/key.json
+        echo "Displaying Terraform Outputs..."
         terraform output
