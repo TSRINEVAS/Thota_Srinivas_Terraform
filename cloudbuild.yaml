@@ -1,4 +1,4 @@
-timeout: 3600s  # 60 minute timeout for safety
+timeout: 1800s  # 30-minute timeout (adjust as needed)
 
 options:
   logging: CLOUD_LOGGING_ONLY
@@ -8,14 +8,10 @@ options:
     - TF_IN_AUTOMATION=true
     - TF_INPUT=false
     - TF_CLI_ARGS=-no-color
-  substitution_option: ALLOW_LOOSE
 
 substitutions:
-  _BUILD_ID: ${BUILD_ID}
-  _APPROVAL_TIMEOUT: "7200"  # 2 hours in seconds
   _GCS_BUCKET: "thotaterra"
-  _PLANS_PATH: "terraform-plans"
-  _APPROVALS_PATH: "terraform-approvals"
+  _STATE_PREFIX: "terraform/state"
 
 availableSecrets:
   secretManager:
@@ -25,25 +21,9 @@ availableSecrets:
 serviceAccount: 'terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceaccount.com'
 
 steps:
-  # ========== PREFLIGHT CHECKS ==========
-  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
-    id: Validate Environment
-    entrypoint: bash
-    args:
-      - -c
-      - |
-        set -euo pipefail
-        echo "Validating GCS bucket exists..."
-        gsutil ls gs://${_GCS_BUCKET} || { echo "Bucket ${_GCS_BUCKET} not found"; exit 1; }
-        echo "Creating directories if needed..."
-        gsutil -m stat gs://${_GCS_BUCKET}/${_APPROVALS_PATH}/ || \
-          gsutil -m mkdir gs://${_GCS_BUCKET}/${_APPROVALS_PATH}/
-        gsutil -m stat gs://${_GCS_BUCKET}/${_PLANS_PATH}/ || \
-          gsutil -m mkdir gs://${_GCS_BUCKET}/${_PLANS_PATH}/
-
-  # ========== AUTH SETUP ==========
+  # ========== AUTHENTICATION ==========
   - name: gcr.io/cloud-builders/gcloud
-    id: Setup Auth
+    id: Authenticate
     entrypoint: bash
     secretEnv: [SERVICE_ACCOUNT_KEY]
     args:
@@ -58,7 +38,7 @@ steps:
 
   # ========== TERRAFORM INIT ==========
   - name: hashicorp/terraform:1.5.7
-    id: Terraform Init
+    id: Init
     entrypoint: bash
     args:
       - -c
@@ -66,13 +46,13 @@ steps:
         set -euo pipefail
         terraform init \
           -backend-config="bucket=${_GCS_BUCKET}" \
-          -backend-config="prefix=terraform/state" \
+          -backend-config="prefix=${_STATE_PREFIX}" \
           -reconfigure \
           -upgrade
 
   # ========== TERRAFORM VALIDATE ==========
   - name: hashicorp/terraform:1.5.7
-    id: Terraform Validate
+    id: Validate
     entrypoint: bash
     args:
       - -c
@@ -82,7 +62,7 @@ steps:
 
   # ========== TERRAFORM PLAN ==========
   - name: hashicorp/terraform:1.5.7
-    id: Terraform Plan
+    id: Plan
     entrypoint: bash
     args:
       - -c
@@ -92,60 +72,10 @@ steps:
           -var-file="terraform.tfvars" \
           -out=tfplan.binary \
           -detailed-exitcode || [ $? -eq 2 ]
-        terraform show -json tfplan.binary > tfplan.json
-
-  # ========== UPLOAD PLAN ARTIFACTS ==========
-  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
-    id: Upload Plan
-    entrypoint: bash
-    args:
-      - -c
-      - |
-        set -euo pipefail
-        gsutil -m cp tfplan.binary gs://${_GCS_BUCKET}/${_PLANS_PATH}/${_BUILD_ID}.binary
-        gsutil -m cp tfplan.json gs://${_GCS_BUCKET}/${_PLANS_PATH}/${_BUILD_ID}.json
-        echo "Terraform plan artifacts:"
-        echo "Binary: gs://${_GCS_BUCKET}/${_PLANS_PATH}/${_BUILD_ID}.binary"
-        echo "JSON:  gs://${_GCS_BUCKET}/${_PLANS_PATH}/${_BUILD_ID}.json"
-        echo ""
-        echo "To approve this build, run:"
-        echo "gsutil touch gs://${_GCS_BUCKET}/${_APPROVALS_PATH}/approve-${_BUILD_ID}"
-
-  # ========== APPROVAL GATE ==========
-  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
-    id: Wait for Approval
-    entrypoint: bash
-    args:
-      - -c
-      - |
-        set -euo pipefail
-        echo "Waiting for approval (Timeout: ${_APPROVAL_TIMEOUT}s)..."
-        
-        START_TIME=$(date +%s)
-        TIMEOUT_SECONDS=${_APPROVAL_TIMEOUT}
-        
-        while true; do
-          CURRENT_TIME=$(date +%s)
-          ELAPSED=$((CURRENT_TIME - START_TIME))
-          
-          if [ "$ELAPSED" -ge "$TIMEOUT_SECONDS" ]; then
-            echo "Timeout reached without approval. Exiting."
-            exit 1
-          fi
-          
-          if gsutil -q stat gs://${_GCS_BUCKET}/${_APPROVALS_PATH}/approve-${_BUILD_ID}; then
-            echo "Approval detected. Downloading plan..."
-            gsutil cp gs://${_GCS_BUCKET}/${_PLANS_PATH}/${_BUILD_ID}.binary tfplan.binary
-            break
-          fi
-          
-          echo "Waiting... ($((TIMEOUT_SECONDS - ELAPSED))s remaining)"
-          sleep 30
-        done
 
   # ========== TERRAFORM APPLY ==========
   - name: hashicorp/terraform:1.5.7
-    id: Terraform Apply
+    id: Apply
     entrypoint: bash
     args:
       - -c
@@ -153,15 +83,13 @@ steps:
         set -euo pipefail
         terraform apply -auto-approve tfplan.binary
 
-  # ========== CLEANUP ==========
-  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
-    id: Cleanup Approval
+  # ========== OUTPUTS ==========
+  - name: hashicorp/terraform:1.5.7
+    id: Outputs
     entrypoint: bash
     args:
       - -c
       - |
         set -euo pipefail
-        echo "Cleaning up approval file..."
-        gsutil rm gs://${_GCS_BUCKET}/${_APPROVALS_PATH}/approve-${_BUILD_ID} || \
-          echo "No approval file found (already cleaned up)"
-        echo "Build completed successfully"
+        terraform output -json > /workspace/tf_output.json
+        echo "Terraform outputs saved to /workspace/tf_output.json"
