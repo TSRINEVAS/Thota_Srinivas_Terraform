@@ -7,8 +7,9 @@ availableSecrets:
       env: SERVICE_ACCOUNT_KEY
 
 serviceAccount: 'terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceaccount.com'
+
 steps:
-  # Step 0: Write Service Account Key
+  # Step 0: Setup Auth
   - name: gcr.io/cloud-builders/gcloud
     id: Setup Auth
     entrypoint: sh
@@ -61,19 +62,10 @@ steps:
           exit 1
         fi
 
-  # Step 4: Manual Approval Step
-  - name: gcr.io/cloud-builders/gcloud
-    id: Manual Approval
-    waitFor: ["-"]  # This triggers manual approval in Cloud Build UI
-    entrypoint: bash
-    args:
-      - -c
-      - |
-        echo "🛑 Waiting for manual approval... Please approve this build in Google Cloud Console."
-
-  # Step 5: Terraform Apply
+# 🛑 From here manual approval required
   - name: hashicorp/terraform:1.5.7
     id: Terraform Apply
+    approvalRequired: true   # ✅ this triggers manual approval
     entrypoint: sh
     args:
       - -c
@@ -82,7 +74,6 @@ steps:
         echo "Applying Terraform changes..."
         terraform apply -var-file="terraform.tfvars" -auto-approve
 
-  # Step 6: Terraform Output
   - name: hashicorp/terraform:1.5.7
     id: Terraform Output
     entrypoint: sh
