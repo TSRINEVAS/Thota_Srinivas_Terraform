@@ -7,7 +7,6 @@ availableSecrets:
       env: SERVICE_ACCOUNT_KEY
 
 serviceAccount: 'terraformfordevlopment@vaulted-epigram-457004-c6.iam.gserviceaccount.com'
-
 steps:
   # Step 0: Write Service Account Key
   - name: gcr.io/cloud-builders/gcloud
