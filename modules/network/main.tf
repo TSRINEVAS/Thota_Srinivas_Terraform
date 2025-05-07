@@ -1,24 +1,11 @@
-resource "google_compute_instance" "vm_instance" {
-  name         = "sample-vm"
-  project      = var.project_id
-  zone         = var.gcp_zone
-  machine_type = "e2-medium"
+resource "google_compute_network" "vpc" {
+  name                    = var.vpc_name
+  auto_create_subnetworks = false
+}
 
-  boot_disk {
-    initialize_params {
-      image = "debian-cloud/debian-11"
-    }
-  }
-
-  network_interface {
-    network    = google_compute_network.vpc.id
-    subnetwork = google_compute_subnetwork.subnet.name
-
-    # 👉 This assigns an ephemeral external IP
-    access_config {
-      # Leave empty for dynamic public IP
-    }
-  }
-
-  tags = ["http-server", "https-server"]
+resource "google_compute_subnetwork" "subnet" {
+  name          = var.subnet_name
+  ip_cidr_range = var.subnet_cidr
+  region        = var.region
+  network       = google_compute_network.vpc.id
 }
