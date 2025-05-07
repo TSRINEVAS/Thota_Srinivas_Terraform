@@ -23,7 +23,7 @@ module "compute" {
   machine_type  = "e2-medium"
   zone          = var.gcp_zone
   boot_image    = "debian-cloud/debian-11"
-  network       = network = module.network.vpc_self_link
+  network       = module.network.vpc_self_link
   subnetwork    = module.network.subnet_name
   startup_script = "echo Hello from Terraform > /var/tmp/hello.txt"
 }
